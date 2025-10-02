@@ -1,7 +1,6 @@
 import FriendRequest from '../models/FriendRequest.js';
 import User from '../models/auth.js';
 
-// Send friend request
 export const sendFriendRequest = async (req, res) => {
   try {
     const fromUserId = req.userid;
@@ -15,7 +14,6 @@ export const sendFriendRequest = async (req, res) => {
       return res.status(400).json({ message: 'Cannot send friend request to yourself' });
     }
 
-    // Check if users exist
     const [fromUser, toUser] = await Promise.all([
       User.findById(fromUserId),
       User.findById(toUserId)
@@ -25,12 +23,10 @@ export const sendFriendRequest = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if already friends
     if (fromUser.friends.includes(toUserId)) {
       return res.status(400).json({ message: 'Already friends' });
     }
 
-    // Check if request already exists
     const existingRequest = await FriendRequest.findOne({
       $or: [
         { from: fromUserId, to: toUserId },
@@ -42,7 +38,6 @@ export const sendFriendRequest = async (req, res) => {
       if (existingRequest.status === 'pending') {
         return res.status(400).json({ message: 'Friend request already sent' });
       }
-      // Update existing rejected request
       existingRequest.from = fromUserId;
       existingRequest.to = toUserId;
       existingRequest.status = 'pending';
@@ -76,7 +71,6 @@ export const sendFriendRequest = async (req, res) => {
   }
 };
 
-// Get pending friend requests (received)
 export const getPendingRequests = async (req, res) => {
   try {
     const userId = req.userid;
@@ -95,7 +89,6 @@ export const getPendingRequests = async (req, res) => {
   }
 };
 
-// Get sent friend requests
 export const getSentRequests = async (req, res) => {
   try {
     const userId = req.userid;
@@ -114,7 +107,6 @@ export const getSentRequests = async (req, res) => {
   }
 };
 
-// Accept friend request
 export const acceptFriendRequest = async (req, res) => {
   try {
     const userId = req.userid;
@@ -134,12 +126,10 @@ export const acceptFriendRequest = async (req, res) => {
       return res.status(400).json({ message: 'Request already processed' });
     }
 
-    // Update request status
-    request.status = 'accepted';
+      request.status = 'accepted';
     request.respondedAt = new Date();
     await request.save();
 
-    // Add to friends list (both users)
     await Promise.all([
       User.findByIdAndUpdate(request.from, { $addToSet: { friends: request.to } }),
       User.findByIdAndUpdate(request.to, { $addToSet: { friends: request.from } })
@@ -161,7 +151,6 @@ export const acceptFriendRequest = async (req, res) => {
   }
 };
 
-// Reject friend request
 export const rejectFriendRequest = async (req, res) => {
   try {
     const userId = req.userid;
@@ -181,7 +170,6 @@ export const rejectFriendRequest = async (req, res) => {
       return res.status(400).json({ message: 'Request already processed' });
     }
 
-    // Update request status
     request.status = 'rejected';
     request.respondedAt = new Date();
     await request.save();
@@ -197,7 +185,6 @@ export const rejectFriendRequest = async (req, res) => {
   }
 };
 
-// Cancel sent friend request
 export const cancelFriendRequest = async (req, res) => {
   try {
     const userId = req.userid;
@@ -230,7 +217,6 @@ export const cancelFriendRequest = async (req, res) => {
   }
 };
 
-// Get friends list
 export const getFriends = async (req, res) => {
   try {
     const userId = req.params.userId || req.userid;
@@ -251,7 +237,6 @@ export const getFriends = async (req, res) => {
   }
 };
 
-// Remove friend
 export const removeFriend = async (req, res) => {
   try {
     const userId = req.userid;

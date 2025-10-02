@@ -55,6 +55,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://codequest93.netlify.app",
+  "https://codequestapp1.netlify.app",
   process.env.ALLOWED_ORIGIN
 ].filter(Boolean);
 app.use(cors({
