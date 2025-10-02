@@ -6,13 +6,11 @@ import User from '../models/auth.js';
 import { SUBSCRIPTION_PLANS, isPaymentTimeAllowed } from '../config/subscriptionPlans.js';
 import nodemailer from 'nodemailer';
 
-// Initialize Razorpay (Add keys to .env)
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_dummy',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret'
 });
 
-// Email configuration
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -21,7 +19,6 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Get all subscription plans
 export const getPlans = async (req, res) => {
     try {
         res.status(200).json({
@@ -37,14 +34,12 @@ export const getPlans = async (req, res) => {
     }
 };
 
-// Get user's current subscription
 export const getMySubscription = async (req, res) => {
     try {
         const { userId } = req;
 
         let subscription = await Subscription.findOne({ userId });
 
-        // Create free subscription if doesn't exist
         if (!subscription) {
             subscription = await Subscription.create({
                 userId,
@@ -53,7 +48,6 @@ export const getMySubscription = async (req, res) => {
             });
         }
 
-        // Check if expired
         if (subscription.isExpired()) {
             subscription.planType = 'free';
             subscription.questionsPerDay = 1;
@@ -61,7 +55,6 @@ export const getMySubscription = async (req, res) => {
             await subscription.save();
         }
 
-        // Reset daily count if needed
         subscription.resetDailyCount();
         await subscription.save();
 
@@ -79,7 +72,6 @@ export const getMySubscription = async (req, res) => {
     }
 };
 
-// Create payment order
 export const createOrder = async (req, res) => {
     console.log('\n🚀 ========== CREATE ORDER START ==========');
     try {
@@ -97,7 +89,6 @@ export const createOrder = async (req, res) => {
             });
         }
         
-        // Get user email from database
         let email = 'test@example.com';
         try {
             const user = await User.findById(userId);
@@ -110,7 +101,6 @@ export const createOrder = async (req, res) => {
 
         console.log('💳 Create order request:', { planType, userId, email });
 
-        // Check payment time window
         if (!isPaymentTimeAllowed()) {
             console.log('⏰ Payment outside time window');
             return res.status(403).json({
@@ -121,7 +111,6 @@ export const createOrder = async (req, res) => {
             });
         }
 
-        // Validate plan
         if (!SUBSCRIPTION_PLANS[planType] || planType === 'free') {
             console.log('❌ Invalid plan type:', planType);
             return res.status(400).json({
@@ -131,11 +120,10 @@ export const createOrder = async (req, res) => {
         }
 
         const plan = SUBSCRIPTION_PLANS[planType];
-        const amount = plan.price * 100; // Convert to paise
+        const amount = plan.price * 100; 
 
         console.log('📦 Plan details:', { name: plan.name, amount: plan.price });
 
-        // Create Razorpay order
         const options = {
             amount,
             currency: 'INR',
@@ -150,10 +138,8 @@ export const createOrder = async (req, res) => {
         console.log('🔄 Creating Razorpay order...');
         
         let order;
-        // Check if Razorpay is properly configured
         if (process.env.RAZORPAY_KEY_ID === 'rzp_test_dummy' || !process.env.RAZORPAY_KEY_ID) {
             console.log('⚠️ Razorpay not configured, using mock order for testing');
-            // Create mock order for testing
             order = {
                 id: `order_mock_${Date.now()}`,
                 entity: 'order',
@@ -173,10 +159,8 @@ export const createOrder = async (req, res) => {
         
         console.log('✅ Order created:', order.id);
 
-        // Save payment record
         console.log('💾 Saving payment record...');
         try {
-            // Check if order already exists
             const existingPayment = await Payment.findOne({ orderId: order.id });
             if (!existingPayment) {
                 await Payment.create({
@@ -225,7 +209,7 @@ export const createOrder = async (req, res) => {
     }
 };
 
-// Verify payment and activate subscription
+
 export const verifyPayment = async (req, res) => {
     try {
         const {
@@ -236,7 +220,6 @@ export const verifyPayment = async (req, res) => {
 
         const { userId, email } = req;
 
-        // Verify signature
         const sign = razorpay_order_id + '|' + razorpay_payment_id;
         const expectedSign = crypto
             .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'dummy_secret')
@@ -250,7 +233,6 @@ export const verifyPayment = async (req, res) => {
             });
         }
 
-        // Find payment record
         const payment = await Payment.findOne({ orderId: razorpay_order_id });
         if (!payment) {
             return res.status(404).json({
@@ -259,22 +241,18 @@ export const verifyPayment = async (req, res) => {
             });
         }
 
-        // Update payment status
         payment.paymentId = razorpay_payment_id;
         payment.razorpaySignature = razorpay_signature;
         payment.status = 'completed';
         payment.completedAt = new Date();
         await payment.save();
 
-        // Get plan details
         const plan = SUBSCRIPTION_PLANS[payment.planType];
         
-        // Calculate end date
         const startDate = new Date();
         const endDate = new Date();
         endDate.setDate(endDate.getDate() + plan.duration);
 
-        // Update or create subscription
         let subscription = await Subscription.findOne({ userId });
         
         if (subscription) {
@@ -302,7 +280,6 @@ export const verifyPayment = async (req, res) => {
             });
         }
 
-        // Send invoice email
         await sendInvoiceEmail(payment, subscription, email);
 
         console.log(`\n✅ ========== PAYMENT SUCCESSFUL ==========`);
@@ -328,7 +305,6 @@ export const verifyPayment = async (req, res) => {
     }
 };
 
-// Send invoice email
 const sendInvoiceEmail = async (payment, subscription, userEmail) => {
     try {
         const plan = SUBSCRIPTION_PLANS[payment.planType];
@@ -380,11 +356,9 @@ const sendInvoiceEmail = async (payment, subscription, userEmail) => {
         console.log(`📧 Invoice email sent to ${userEmail}`);
     } catch (error) {
         console.error('Email sending failed:', error);
-        // Don't throw error, email failure shouldn't stop payment completion
     }
 };
 
-// Get payment history
 export const getPaymentHistory = async (req, res) => {
     try {
         const { userId } = req;

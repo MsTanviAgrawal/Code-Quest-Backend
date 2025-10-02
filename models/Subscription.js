@@ -50,18 +50,14 @@ const subscriptionSchema = mongoose.Schema({
     }
 });
 
-// Method to check if subscription is expired
 subscriptionSchema.methods.isExpired = function() {
     if (this.planType === 'free') return false;
     return this.endDate && new Date() > this.endDate;
 };
-
-// Method to reset daily question count
 subscriptionSchema.methods.resetDailyCount = function() {
     const today = new Date();
     const lastReset = new Date(this.lastResetDate);
     
-    // Check if it's a new day
     if (today.getDate() !== lastReset.getDate() || 
         today.getMonth() !== lastReset.getMonth() ||
         today.getFullYear() !== lastReset.getFullYear()) {
@@ -72,15 +68,11 @@ subscriptionSchema.methods.resetDailyCount = function() {
     return false;
 };
 
-// Method to check if user can post question
 subscriptionSchema.methods.canPostQuestion = function() {
-    // Reset count if new day
     this.resetDailyCount();
     
-    // Gold plan has unlimited questions
     if (this.planType === 'gold') return true;
     
-    // Check if within daily limit
     return this.questionsUsedToday < this.questionsPerDay;
 };
 

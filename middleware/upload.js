@@ -7,13 +7,10 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../uploads/videos');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
-
-// Configure storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, uploadsDir);
@@ -24,7 +21,6 @@ const storage = multer.diskStorage({
     }
 });
 
-// File filter
 const fileFilter = (req, file, cb) => {
     const allowedTypes = /mp4|avi|mov|wmv|flv|mkv|webm/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -37,11 +33,10 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Multer upload configuration
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 50 * 1024 * 1024 // 50MB limit
+        fileSize: 50 * 1024 * 1024 
     },
     fileFilter: fileFilter
 });

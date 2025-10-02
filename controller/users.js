@@ -45,12 +45,9 @@ export const googleLogin = async (req, res) => {
     const { email, name, token, googleId } = req.body;
 
     try {
-        // Get device information
         const userAgent = req.headers['user-agent'] || '';
         const { browser, os, deviceType } = parseUserAgent(userAgent);
         const ipAddress = getIpAddress(req);
-
-        // Check mobile time restriction
         if (deviceType === 'mobile' && !isMobileAccessAllowed()) {
             return res.status(403).json({ 
                 message: "Mobile access is only allowed between 10 AM to 1 PM" 
@@ -76,7 +73,6 @@ export const googleLogin = async (req, res) => {
             { expiresIn: '7d' }
         );
 
-        // Log Google login history
         await LoginHistory.create({
             userId: existingUser._id,
             email: existingUser.email,
